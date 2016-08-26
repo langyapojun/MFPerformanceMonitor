@@ -22,9 +22,9 @@ Pod::Spec.new do |s|
 
   s.ios.deployment_target = '7.0'
 
-  s.source_files = '*.{h,m}'
+  s.source_files = '**/*.{h,m}'
 
-  s.public_header_files = '*.{h}'
+  s.public_header_files = '**/*.{h}'
   s.requires_arc = true
   s.dependency 'PNChart'
 end
