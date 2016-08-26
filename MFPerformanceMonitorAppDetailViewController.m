@@ -10,7 +10,6 @@
 #import "MFPerformanceMonitorManager.h"
 #import "MFPerformanceModel.h"
 #import "PNChart.h"
-#include "LibXL/libxl.h"
 
 #if _INTERNAL_MFPM_ENABLED
 
@@ -89,62 +88,6 @@
 - (void)initNavis
 {
     self.title = @"App Performance";
-    
-    UIBarButtonItem *rightButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Save" style:UIBarButtonItemStylePlain target:self action:@selector(saveToFile:)];
-    self.navigationItem.rightBarButtonItem = rightButtonItem;
-}
-
-- (void)saveToFile:(id)sender
-{
-    BookHandle book = xlCreateBook();
-    
-    SheetHandle sheet = xlBookAddSheet(book, "Sheet1", NULL);
-    
-    NSString *picFilePath = [self screenShot];
-    int pictureId = xlBookAddPicture(book,[picFilePath UTF8String]);
-    NSAssert(pictureId != -1, @"add picture error!");
-    
-    xlSheetSetPictureA(sheet, 1, 1, pictureId, 1, 0, 0, 0);
-    
-    NSString *documentPath =
-    [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask, YES) objectAtIndex:0];
-    NSString *filename = [documentPath stringByAppendingPathComponent:@"out.xls"];
-    
-    xlBookSave(book, [filename UTF8String]);
-    
-    xlBookRelease(book);
-}
-
--(NSString *)screenShot
-{
-    UIGraphicsBeginImageContextWithOptions(CGSizeMake([UIScreen mainScreen].bounds.size.width, ([UIScreen mainScreen].bounds.size.height - 64)), NO, 1);
-    
-    //设置截屏大小
-    
-    [[self.view layer] renderInContext:UIGraphicsGetCurrentContext()];
-    
-    UIImage *viewImage = UIGraphicsGetImageFromCurrentImageContext();
-    
-    UIGraphicsEndImageContext();
-    
-    CGImageRef imageRef = viewImage.CGImage;
-    CGRect rect = CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.height - 64);//这里可以设置想要截图的区域
-    
-    CGImageRef imageRefRect =CGImageCreateWithImageInRect(imageRef, rect);
-    UIImage *sendImage = [[UIImage alloc] initWithCGImage:imageRefRect];
-    
-    
-    NSData *imageViewData = UIImagePNGRepresentation(sendImage);
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-    
-    NSString *documentsDirectory = [paths objectAtIndex:0];
-    NSString *pictureName= @"appPerformance.png";
-    NSString *savedImagePath = [documentsDirectory stringByAppendingPathComponent:pictureName];
-    [imageViewData writeToFile:savedImagePath atomically:YES];//保存照片到沙盒目录
-    
-    CGImageRelease(imageRefRect);
-    
-    return savedImagePath;
 }
 
 @end
