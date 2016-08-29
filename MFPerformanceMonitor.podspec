@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = "MFPerformanceMonitor"
-  s.version          = "0.1.6"
+  s.version          = "0.1.7"
   s.summary          = "A tool to monitor ios app performance such as memory and cpu."
 
 # This description is used to generate tags and improve search results.
@@ -23,7 +23,7 @@ Pod::Spec.new do |s|
   s.ios.deployment_target = '7.0'
   #s.framework = 'LibXL'
   s.preserve_path = 'thirdParty/LibXL/LibXL'
-  #s.vendored_libraries = 'thirdParty/LibXL/LibXL'
+  s.vendored_libraries = 'thirdParty/LibXL/LibXL'
 
   s.source_files = '**/*.{h,m}','thirdParty/LibXL/Headers/*.h'
 
