@@ -10,7 +10,7 @@
 #import "MFPerformanceMonitorViewController.h"
 #import "MFPerformanceMonitorManager.h"
 #import "MFPerformanceModel.h"
-#import "LibXL/libxl.h"
+#import "libxl.h"
 
 #if _INTERNAL_MFPM_ENABLED
 
