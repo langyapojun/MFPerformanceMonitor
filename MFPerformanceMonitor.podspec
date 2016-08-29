@@ -17,7 +17,8 @@ Pod::Spec.new do |s|
 
   s.public_header_files = '**/*.{h}'
   s.requires_arc = true
-  s.dependency 'PNChart', 'MLeaksFinder'
+  s.dependency 'PNChart'
+  s.dependency 'MLeaksFinder'
 
   the_ldflags    = '$(inherited) -lz -lstdc++ -framework "LibXL"'
 
