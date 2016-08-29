@@ -22,9 +22,10 @@ Pod::Spec.new do |s|
 
   s.ios.deployment_target = '7.0'
   #s.framework = 'LibXL'
-  s.vendored_frameworks = 'thirdParty/LibXL.framework'
+  s.preserve_path = 'thirdParty/LibXL/LibXL'
+  #s.vendored_libraries = 'thirdParty/LibXL/LibXL'
 
-  s.source_files = '**/*.{h,m}'
+  s.source_files = '**/*.{h,m}','thirdParty/LibXL/Headers/*.h'
 
   s.public_header_files = '**/*.{h}'
   s.requires_arc = true
