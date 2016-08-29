@@ -6,7 +6,7 @@ Pod::Spec.new do |s|
 
   s.license          = 'MIT'
   s.author           = { "Vic" => "704550191@qq.com" }
-  s.source           = { :git => "https://github.com/vviicc/MFPerformanceMonitor.git", :tag => "0.1.8" }
+  s.source           = { :git => "https://github.com/vviicc/MFPerformanceMonitor.git", :tag => s.version }
 
   s.ios.deployment_target = '7.0'
   #s.framework = 'LibXL'
