@@ -34,4 +34,4 @@ APP定时采样
 
 Excel文件查看 
 
-<img src="http://vviicc.qiniudn.com/excel@2x.png" width="300">
+<img src="http://vviicc.qiniudn.com/excel@2x.png" width="500">
