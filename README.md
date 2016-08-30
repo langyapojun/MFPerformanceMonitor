@@ -14,6 +14,8 @@ A tool to monitor ios app performance such as memory and cpu.
 pod 'MFPerformanceMonitor', :configurations => ['Debug']
 ```
 
+ps:Other Linker Flags加入-ObjC标志或者用-force_load libMFPerformanceMonitor.a以及 libMLeaksFinder.a
+
 # Screenshots
 
 入口
