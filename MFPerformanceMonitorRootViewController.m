@@ -152,9 +152,9 @@
         xlSheetSetMergeA(sheet,row,row,col,col+2);
         xlSheetSetMergeA(sheet,row,row,col+3,col+5);
         xlSheetSetMergeA(sheet,row,row,col+6,col+8);
-        xlSheetWriteStrA(sheet,row,col,"didload",NULL);
-        xlSheetWriteStrA(sheet,row,col+3,"dealloc",NULL);
-        xlSheetWriteStrA(sheet,row,col+6,"totload",NULL);
+        xlSheetWriteStrA(sheet,row,col,"ViewDidLoad增加的内存",NULL);
+        xlSheetWriteStrA(sheet,row,col+3,"Dealloc后变化内存",NULL);
+        xlSheetWriteStrA(sheet,row,col+6,"APP总内存",NULL);
         
         NSArray *array = @[@"Second",@"Mem",@"CPU"];
         for (int i = 0; i < 9; i++) {

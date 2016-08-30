@@ -14,11 +14,34 @@
 
 @implementation MFPerformanceInfo
 
+- (void)encodeWithCoder:(NSCoder *)aCoder
+{
+    [aCoder encodeFloat:self.memoryUsage forKey:@"memoryUsage"];
+    [aCoder encodeFloat:self.cpuUsage forKey:@"cpuUsage"];
+    [aCoder encodeObject:self.intervalSeconds forKey:@"intervalSeconds"];
+}
+
+- (id)initWithCoder:(NSCoder *)aDecoder
+{
+    self = [super init];
+    if (self)
+    {
+        self.memoryUsage = [aDecoder decodeFloatForKey:@"memoryUsage"];
+        self.cpuUsage = [aDecoder decodeFloatForKey:@"cpuUsage"];
+        self.intervalSeconds = [aDecoder decodeObjectForKey:@"intervalSeconds"];
+    }
+    return self;
+}
+
 @end
 
 @implementation MFControllerPerformanceInfo
 
 @end
+
+static NSString const * kMFPerformanceMonitorTempSamplingPerformanceDictFile = @"MFPerformanceMonitorTempSamplingPerformanceDictFile";
+static NSString const * kMFPerformanceMonitorTempAppPerformanceListFile = @"MFPerformanceMonitorTempAppPerformanceListFile";
+static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10;         // 最大的数组个数，超过后写入本地文件，目的是减少内存
 
 @interface MFPerformanceModel ()
 
@@ -33,6 +56,7 @@
 {
     if (self = [super init]) {
         [self initData];
+        [self initLoaclFile];
         [self startSamplingTimer];
     }
     return self;
@@ -52,6 +76,20 @@
     _memoryWithAllocLifeCycleDict = [NSMutableDictionary dictionary];
     _appPerformanceList = [NSMutableArray array];
     _startMediaTime = CACurrentMediaTime();
+}
+
+- (void)initLoaclFile
+{
+    if ([[NSFileManager defaultManager] fileExistsAtPath:[self tempSamplingPerformanceDictFilePath]]) {
+        NSError *error;
+        [[NSFileManager defaultManager] removeItemAtPath:[self tempSamplingPerformanceDictFilePath] error:&error];
+    }
+    
+    if ([[NSFileManager defaultManager] fileExistsAtPath:[self tempAppPerformanceListFilePath]]) {
+        NSError *error;
+        [[NSFileManager defaultManager] removeItemAtPath:[self tempAppPerformanceListFilePath] error:&error];
+    }
+    
 }
 
 - (void)startSamplingTimer
@@ -103,10 +141,25 @@
         NSMutableArray *controllerPerformanceInfoList = [_samplingPerformanceDict objectForKey:controllerName];
         [controllerPerformanceInfoList addObject:performanceInfo];
     } else {
+        if (![self.samplingPerformanceDict objectForKey:controllerName]) {
+            [_samplingPerformanceControllerNameList addObject:controllerName];
+        }
+        
         NSMutableArray *controllerPerformanceInfoList = [NSMutableArray array];
         [controllerPerformanceInfoList addObject:performanceInfo];
         [_samplingPerformanceDict setObject:controllerPerformanceInfoList forKey:controllerName];
-        [_samplingPerformanceControllerNameList addObject:controllerName];
+    }
+    
+    NSArray<NSMutableArray<MFPerformanceInfo *> *>*performanceArray = _samplingPerformanceDict.allValues;
+    int count = 0;
+    for (NSMutableArray<MFPerformanceInfo *>*performances in performanceArray) {
+        count += performances.count;
+    }
+    count += _appPerformanceList.count;
+    
+    if (count >= kMFPerformanceMonitorMaxArrayCount) {
+        [self saveSamplingPerformanceDictToLocal];
+        [self saveAppPerformanceListToLocal];
     }
 }
 
@@ -155,7 +208,7 @@
         return -1;
     }
     if (thread_count > 0)
-        stat_thread += thread_count;
+    stat_thread += thread_count;
     
     long tot_sec = 0;
     long tot_usec = 0;
@@ -282,6 +335,74 @@
             [_lifecyclePerformanceControllerNameList addObject:controllerName];
         }
     }
+}
+
+#pragma mark - Local Cache
+
+- (void)saveSamplingPerformanceDictToLocal
+{
+    NSString *filePath = [self tempSamplingPerformanceDictFilePath];
+    [NSKeyedArchiver archiveRootObject:self.samplingPerformanceDict toFile:filePath];
+    [_samplingPerformanceDict removeAllObjects];
+}
+
+- (void)saveAppPerformanceListToLocal
+{
+    NSString *filePath = [self tempAppPerformanceListFilePath];
+    [NSKeyedArchiver archiveRootObject:self.appPerformanceList toFile:filePath];
+    [_appPerformanceList removeAllObjects];
+}
+
+- (NSMutableDictionary<NSString *, NSMutableArray<MFPerformanceInfo *> *> *)samplingPerformanceDict
+{
+    NSString *filePath = [self tempSamplingPerformanceDictFilePath];
+    NSMutableDictionary<NSString *, NSMutableArray<MFPerformanceInfo *> *> *savedDict = [NSKeyedUnarchiver unarchiveObjectWithFile:filePath];
+    
+    NSMutableDictionary *tempDict = [NSMutableDictionary dictionaryWithDictionary:_samplingPerformanceDict];
+    if (savedDict) {
+        for (NSString *keyString in tempDict.allKeys) {
+            NSMutableArray<MFPerformanceInfo *> *tempArray = tempDict[keyString];
+            
+            if (![savedDict objectForKey:keyString]) {
+                [savedDict setObject:tempArray forKey:keyString];
+            } else {
+                NSMutableArray<MFPerformanceInfo *> *saveArray = savedDict[keyString];
+                [saveArray addObjectsFromArray:tempArray];
+            }
+        }
+        
+        return savedDict;
+    } else {
+        return tempDict;
+    }
+}
+
+- (NSMutableArray<MFPerformanceInfo *> *)appPerformanceList
+{
+    NSString *filePath = [self tempAppPerformanceListFilePath];
+    NSMutableArray<MFPerformanceInfo *> *savedArray = [NSKeyedUnarchiver unarchiveObjectWithFile:filePath];
+    
+    NSMutableArray *tempArray = [NSMutableArray arrayWithArray:_appPerformanceList];
+    if (savedArray) {
+        [savedArray addObjectsFromArray:tempArray];
+        return savedArray;
+    } else {
+        return tempArray;
+    }
+}
+
+- (NSString *)tempSamplingPerformanceDictFilePath
+{
+    NSString *docsPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
+    NSString *filePath = [docsPath stringByAppendingPathComponent:kMFPerformanceMonitorTempSamplingPerformanceDictFile];
+    return filePath;
+}
+
+- (NSString *)tempAppPerformanceListFilePath
+{
+    NSString *docsPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
+    NSString *filePath = [docsPath stringByAppendingPathComponent:kMFPerformanceMonitorTempAppPerformanceListFile];
+    return filePath;
 }
 
 @end

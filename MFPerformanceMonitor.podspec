@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = "MFPerformanceMonitor"
-  s.version          = "0.1.13"
+  s.version          = "0.1.14"
   s.homepage         = "https://github.com/vviicc/MFPerformanceMonitor"
   s.summary          = "A tool to monitor ios app performance such as memory and cpu."
 
