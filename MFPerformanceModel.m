@@ -41,7 +41,7 @@
 
 static NSString const * kMFPerformanceMonitorTempSamplingPerformanceDictFile = @"MFPerformanceMonitorTempSamplingPerformanceDictFile";
 static NSString const * kMFPerformanceMonitorTempAppPerformanceListFile = @"MFPerformanceMonitorTempAppPerformanceListFile";
-static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10;         // 最大的数组个数，超过后写入本地文件，目的是减少内存
+static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // 最大的数组个数，超过后写入本地文件，目的是减少内存
 
 @interface MFPerformanceModel ()
 
