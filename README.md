@@ -10,20 +10,20 @@ pod 'MFPerformanceMonitor', :configurations => ['Debug']
 
 入口
 
-![Menu](http://vviicc.qiniudn.com/menu@2x.png =300x)
+![Menu](http://vviicc.qiniudn.com/menu@2x.png)
 
 主界面
 
-![Main](http://vviicc.qiniudn.com/main@2x.png =300x)
+![Main](http://vviicc.qiniudn.com/main@2x.png)
 
 Controller内存变化
 
-![Lifecycle](http://vviicc.qiniudn.com/lifecycle@2x.png =300x)
+![Lifecycle](http://vviicc.qiniudn.com/lifecycle@2x.png)
 
 Controller定时采样
 
-![Sampling](http://vviicc.qiniudn.com/sampling@2x.png =300x)
+![Sampling](http://vviicc.qiniudn.com/sampling@2x.png)
 
 APP定时采样
 
-![APP](http://vviicc.qiniudn.com/app@2x.png =300x)
+![APP](http://vviicc.qiniudn.com/app@2x.png)
