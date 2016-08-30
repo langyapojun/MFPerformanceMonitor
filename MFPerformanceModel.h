@@ -35,11 +35,11 @@ typedef NS_ENUM(NSUInteger,MFMemoryMonitorLifeCycle) {
 
 @interface MFPerformanceModel : NSObject
 
-@property (nonatomic, strong, readonly) NSMutableArray<NSString *> *lifecyclePerformanceControllerNameList;
-@property (nonatomic, strong, readonly) NSMutableArray<NSString *> *samplingPerformanceControllerNameList;
-@property (nonatomic, strong, readonly) NSMutableDictionary<NSString *, MFControllerPerformanceInfo *> *lifecyclePerformanceDict;
-@property (nonatomic, strong, readonly) NSMutableDictionary<NSString *, NSMutableArray<MFPerformanceInfo *> *> *samplingPerformanceDict;
-@property (nonatomic, strong, readonly) NSMutableArray<MFPerformanceInfo *> *appPerformanceList;
+@property (nonatomic, strong) NSMutableArray<NSString *> *lifecyclePerformanceControllerNameList;
+@property (nonatomic, strong) NSMutableArray<NSString *> *samplingPerformanceControllerNameList;
+@property (nonatomic, strong) NSMutableDictionary<NSString *, MFControllerPerformanceInfo *> *lifecyclePerformanceDict;
+@property (nonatomic, strong) NSMutableDictionary<NSString *, NSMutableArray<MFPerformanceInfo *> *> *samplingPerformanceDict;
+@property (nonatomic, strong) NSMutableArray<MFPerformanceInfo *> *appPerformanceList;
 
 - (CGFloat)appMemoryUsage;
 - (CGFloat)appCpuUsage;
