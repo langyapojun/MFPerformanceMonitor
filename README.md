@@ -27,3 +27,11 @@ Controller定时采样
 APP定时采样
 
 <img src="http://vviicc.qiniudn.com/app@2x.png" width="300">
+
+本地保存为Excel 
+
+<img src="http://vviicc.qiniudn.com/file@2x.png" width="300">
+
+Excel文件查看 
+
+<img src="http://vviicc.qiniudn.com/excel@2x.png" width="300">
