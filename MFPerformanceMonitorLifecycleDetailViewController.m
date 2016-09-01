@@ -15,7 +15,7 @@
 
 @interface MFPerformanceMonitorLifecycleDetailViewController ()
 
-@property (nonatomic, strong) MFControllerPerformanceInfo *controllerPerformanceInfo;
+@property (nonatomic, strong) NSMutableDictionary *controllerPerformanceInfo;
 @property (nonatomic, weak)   PNLineChart *lineChart;
 
 @end
@@ -44,7 +44,7 @@
     [self initNavis];
     self.view.backgroundColor = [UIColor whiteColor];
     
-    PNLineChart *lineChart = [[PNLineChart alloc] initWithFrame:CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.height - 64 - 60)];
+    PNLineChart *lineChart = [[PNLineChart alloc] initWithFrame:CGRectMake(0, 64, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.height - 128 - 60)];
     [self.view addSubview:lineChart];
     _lineChart = lineChart;
     
@@ -52,8 +52,8 @@
     lineChart.backgroundColor = [UIColor clearColor];
     lineChart.showCoordinateAxis = YES;
     
-    NSMutableArray<MFPerformanceInfo *> *didloadPerformance = _controllerPerformanceInfo.didloadPerformance;
-    [lineChart setXLabels:[didloadPerformance valueForKeyPath:@"intervalSeconds"]];
+    NSMutableArray<NSDictionary *> *didloadPerformance = [_controllerPerformanceInfo objectForKey:kMFPerformanceMonitorLifecycleDidloadKey];
+    [lineChart setXLabels:[didloadPerformance valueForKeyPath:kMFPerformanceMonitorPerformanceInfoTimeKey]];
 
     PNLineChartData *didloadMemChartData = [PNLineChartData new];
     didloadMemChartData.dataTitle = @"ViewDidLoad增加的内存(MB)";
@@ -61,30 +61,30 @@
     didloadMemChartData.itemCount = didloadPerformance.count;
     didloadMemChartData.inflexionPointStyle = PNLineChartPointStyleCircle;
     didloadMemChartData.getData = ^(NSUInteger index){
-        CGFloat memoryUsage = didloadPerformance[index].memoryUsage;
+        CGFloat memoryUsage = [[didloadPerformance[index] objectForKey:kMFPerformanceMonitorPerformanceInfoMemoryKey] floatValue];
         return [PNLineChartDataItem dataItemWithY:memoryUsage];
     };
     
-    NSMutableArray<MFPerformanceInfo *> *deallocPerformance = _controllerPerformanceInfo.deallocPerformance;
+    NSMutableArray<NSDictionary *> *deallocPerformance = [_controllerPerformanceInfo objectForKey:kMFPerformanceMonitorLifecycleDeallocKey];
     PNLineChartData *deallocMemChartData = [PNLineChartData new];
     deallocMemChartData.dataTitle = @"Dealloc后变化内存(MB)";
     deallocMemChartData.color = PNRed;
     deallocMemChartData.itemCount = deallocPerformance.count;
     deallocMemChartData.inflexionPointStyle = PNLineChartPointStyleCircle;
     deallocMemChartData.getData = ^(NSUInteger index){
-        CGFloat memoryUsage = deallocPerformance[index].memoryUsage;
+        CGFloat memoryUsage = [[deallocPerformance[index] objectForKey:kMFPerformanceMonitorPerformanceInfoMemoryKey] floatValue];
         return [PNLineChartDataItem dataItemWithY:memoryUsage];
     };
     BOOL hasDeallocPerformanceData = deallocPerformance.count > 0;
     
-    NSMutableArray<MFPerformanceInfo *> *totloadPerformance = _controllerPerformanceInfo.totloadPerformance;
+    NSMutableArray<NSDictionary *> *totloadPerformance = [_controllerPerformanceInfo objectForKey:kMFPerformanceMonitorLifecycleTotalKey];
     PNLineChartData *totloadMemChartData = [PNLineChartData new];
     totloadMemChartData.dataTitle = @"APP总内存(MB)";
     totloadMemChartData.color = PNYellow;
     totloadMemChartData.itemCount = totloadPerformance.count;
     totloadMemChartData.inflexionPointStyle = PNLineChartPointStyleCircle;
     totloadMemChartData.getData = ^(NSUInteger index){
-        CGFloat memoryUsage = totloadPerformance[index].memoryUsage;
+        CGFloat memoryUsage = [[totloadPerformance[index] objectForKey:kMFPerformanceMonitorPerformanceInfoMemoryKey] floatValue];
         return [PNLineChartDataItem dataItemWithY:memoryUsage];
     };
     

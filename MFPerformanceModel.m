@@ -12,35 +12,16 @@
 
 #if _INTERNAL_MFPM_ENABLED
 
-@implementation MFPerformanceInfo
+NSString * const kMFPerformanceMonitorPerformanceInfoMemoryKey = @"kMFPerformanceMonitorPerformanceInfoMemoryKey";
+NSString * const kMFPerformanceMonitorPerformanceInfoCpuKey = @"kMFPerformanceMonitorPerformanceInfoCpuKey";
+NSString * const kMFPerformanceMonitorPerformanceInfoTimeKey = @"kMFPerformanceMonitorPerformanceInfoTimeKey";
+NSString * const kMFPerformanceMonitorLifecycleDidloadKey = @"kMFPerformanceMonitorLifecycleDidloadKey";
+NSString * const kMFPerformanceMonitorLifecycleDeallocKey = @"kMFPerformanceMonitorLifecycleDeallocKey";
+NSString * const kMFPerformanceMonitorLifecycleTotalKey = @"kMFPerformanceMonitorLifecycleTotalKey";
 
-- (void)encodeWithCoder:(NSCoder *)aCoder
-{
-    [aCoder encodeFloat:self.memoryUsage forKey:@"memoryUsage"];
-    [aCoder encodeFloat:self.cpuUsage forKey:@"cpuUsage"];
-    [aCoder encodeObject:self.intervalSeconds forKey:@"intervalSeconds"];
-}
-
-- (id)initWithCoder:(NSCoder *)aDecoder
-{
-    self = [super init];
-    if (self)
-    {
-        self.memoryUsage = [aDecoder decodeFloatForKey:@"memoryUsage"];
-        self.cpuUsage = [aDecoder decodeFloatForKey:@"cpuUsage"];
-        self.intervalSeconds = [aDecoder decodeObjectForKey:@"intervalSeconds"];
-    }
-    return self;
-}
-
-@end
-
-@implementation MFControllerPerformanceInfo
-
-@end
-
-static NSString const * kMFPerformanceMonitorTempSamplingPerformanceDictFile = @"MFPerformanceMonitorTempSamplingPerformanceDictFile";
-static NSString const * kMFPerformanceMonitorTempAppPerformanceListFile = @"MFPerformanceMonitorTempAppPerformanceListFile";
+static NSString * kMFPerformanceMonitorTempLifecyclePerformanceDictFile = @"MFPerformanceMonitorTempLifecyclePerformanceDictFile";
+static NSString * kMFPerformanceMonitorTempSamplingPerformanceDictFile = @"MFPerformanceMonitorTempSamplingPerformanceDictFile";
+static NSString * kMFPerformanceMonitorTempAppPerformanceListFile = @"MFPerformanceMonitorTempAppPerformanceListFile";
 static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // 最大的数组个数，超过后写入本地文件，目的是减少内存
 
 @interface MFPerformanceModel ()
@@ -48,6 +29,7 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // �
 @property (nonatomic, strong) dispatch_source_t timeSource;
 @property (nonatomic, assign) CFTimeInterval startMediaTime;
 @property (nonatomic, strong) NSMutableDictionary<NSString *,NSNumber *> *memoryWithAllocLifeCycleDict;
+@property (nonatomic, strong) NSMutableArray<Class> *ignoredControllers;
 @end
 
 @implementation MFPerformanceModel
@@ -76,18 +58,37 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // �
     _memoryWithAllocLifeCycleDict = [NSMutableDictionary dictionary];
     _appPerformanceList = [NSMutableArray array];
     _startMediaTime = CACurrentMediaTime();
+    
+    [self initIgnoredControllers];
+}
+
+- (void)initIgnoredControllers
+{
+    _ignoredControllers = [NSMutableArray array];
+    [_ignoredControllers addObjectsFromArray:@[NSClassFromString(@"MFPerformanceMonitorAppDetailViewController"),
+                                               NSClassFromString(@"MFPerformanceMonitorLifecycleDetailViewController"),
+                                               NSClassFromString(@"MFPerformanceMonitorListViewController"),
+                                               NSClassFromString(@"MFPerformanceMonitorRootViewController"),
+                                               NSClassFromString(@"MFPerformanceMonitorSamplingDetailViewController"),
+                                               NSClassFromString(@"MFPerformanceMonitorViewController"),
+                                               NSClassFromString(@"UINavigationController")
+                                               ]];
 }
 
 - (void)initLoaclFile
 {
+    NSError *error;
+
     if ([[NSFileManager defaultManager] fileExistsAtPath:[self tempSamplingPerformanceDictFilePath]]) {
-        NSError *error;
         [[NSFileManager defaultManager] removeItemAtPath:[self tempSamplingPerformanceDictFilePath] error:&error];
     }
     
     if ([[NSFileManager defaultManager] fileExistsAtPath:[self tempAppPerformanceListFilePath]]) {
-        NSError *error;
         [[NSFileManager defaultManager] removeItemAtPath:[self tempAppPerformanceListFilePath] error:&error];
+    }
+    
+    if ([[NSFileManager defaultManager] fileExistsAtPath:[self tempLifecyclePerformanceDictFilePath]]) {
+        [[NSFileManager defaultManager] removeItemAtPath:[self tempLifecyclePerformanceDictFilePath] error:&error];
     }
     
 }
@@ -126,11 +127,11 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // �
         return;
     }
     
-    MFPerformanceInfo *performanceInfo = [MFPerformanceInfo new];
-    performanceInfo.memoryUsage = totMem;
-    performanceInfo.cpuUsage = totCpu;
-    performanceInfo.intervalSeconds = [NSString stringWithFormat:@"%.0f", CACurrentMediaTime() - _startMediaTime];
-    [_appPerformanceList addObject:performanceInfo];
+    NSDictionary *performanceInfoDict = @{kMFPerformanceMonitorPerformanceInfoMemoryKey:@(totMem),
+                                          kMFPerformanceMonitorPerformanceInfoCpuKey:@(totCpu),
+                                          kMFPerformanceMonitorPerformanceInfoTimeKey:[NSString stringWithFormat:@"%.0f", CACurrentMediaTime() - _startMediaTime]};
+    
+    [_appPerformanceList addObject:performanceInfoDict];
     
     NSString *controllerName = [self currentViewControllerName];
     if (!controllerName) {
@@ -139,20 +140,20 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // �
     
     if ([_samplingPerformanceDict objectForKey:controllerName]) {
         NSMutableArray *controllerPerformanceInfoList = [_samplingPerformanceDict objectForKey:controllerName];
-        [controllerPerformanceInfoList addObject:performanceInfo];
+        [controllerPerformanceInfoList addObject:performanceInfoDict];
     } else {
         if (![self.samplingPerformanceDict objectForKey:controllerName]) {
             [_samplingPerformanceControllerNameList addObject:controllerName];
         }
         
         NSMutableArray *controllerPerformanceInfoList = [NSMutableArray array];
-        [controllerPerformanceInfoList addObject:performanceInfo];
+        [controllerPerformanceInfoList addObject:performanceInfoDict];
         [_samplingPerformanceDict setObject:controllerPerformanceInfoList forKey:controllerName];
     }
     
-    NSArray<NSMutableArray<MFPerformanceInfo *> *>*performanceArray = _samplingPerformanceDict.allValues;
+    NSArray<NSMutableArray<NSDictionary *> *>*performanceArray = _samplingPerformanceDict.allValues;
     int count = 0;
-    for (NSMutableArray<MFPerformanceInfo *>*performances in performanceArray) {
+    for (NSMutableArray<NSDictionary *>*performances in performanceArray) {
         count += performances.count;
     }
     count += _appPerformanceList.count;
@@ -278,6 +279,10 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // �
         return;
     }
     
+    if ([self isIgnoredController:controllerName]) {
+        return;
+    }
+    
     CGFloat totMem = [self appMemoryUsage];
     
     if (totMem < 0) {
@@ -299,74 +304,122 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // �
         CGFloat lastTotMem = [[_memoryWithAllocLifeCycleDict objectForKey:controllerName] floatValue];
         CGFloat changedMem = totMem - lastTotMem;
         
-        MFPerformanceInfo *performanceInfo = [MFPerformanceInfo new];
-        performanceInfo.memoryUsage = changedMem;
-        performanceInfo.cpuUsage = tot_cpu;
-        performanceInfo.intervalSeconds = [NSString stringWithFormat:@"%.0f", CACurrentMediaTime() - _startMediaTime];
+        NSDictionary *diffPerformanceInfoDict = @{kMFPerformanceMonitorPerformanceInfoMemoryKey:@(changedMem),
+                                              kMFPerformanceMonitorPerformanceInfoCpuKey:@(tot_cpu),
+                                              kMFPerformanceMonitorPerformanceInfoTimeKey:[NSString stringWithFormat:@"%.0f", CACurrentMediaTime() - _startMediaTime]};
+        
+        NSDictionary *totalPerformanceInfoDict = @{kMFPerformanceMonitorPerformanceInfoMemoryKey:@(totMem),
+                                                  kMFPerformanceMonitorPerformanceInfoCpuKey:@(tot_cpu),
+                                                  kMFPerformanceMonitorPerformanceInfoTimeKey:[NSString stringWithFormat:@"%.0f", CACurrentMediaTime() - _startMediaTime]};
         
         if ([_lifecyclePerformanceDict objectForKey:controllerName]) {
-            MFControllerPerformanceInfo *controllerPerformanceInfo = [_lifecyclePerformanceDict objectForKey:controllerName];
+            NSMutableDictionary *controllerPerformanceInfoDict = [_lifecyclePerformanceDict objectForKey:controllerName];
             
             if (lifeCycle == MFMemoryMonitorLifeCycleDidload) {
-                [controllerPerformanceInfo.didloadPerformance addObject:performanceInfo];
-                
-                MFPerformanceInfo *totPerformanceInfo = [MFPerformanceInfo new];
-                totPerformanceInfo.memoryUsage = totMem;
-                totPerformanceInfo.cpuUsage = tot_cpu;
-                totPerformanceInfo.intervalSeconds = [NSString stringWithFormat:@"%.0f", CACurrentMediaTime() - _startMediaTime];
-                [controllerPerformanceInfo.totloadPerformance addObject:totPerformanceInfo];
+                NSMutableArray *didloadPerformanceArray = controllerPerformanceInfoDict[kMFPerformanceMonitorLifecycleDidloadKey];
+                NSMutableArray *totloadPerformanceArray = controllerPerformanceInfoDict[kMFPerformanceMonitorLifecycleTotalKey];
+                [didloadPerformanceArray addObject:diffPerformanceInfoDict];
+                [totloadPerformanceArray addObject:totalPerformanceInfoDict];
             } else if (lifeCycle == MFMemoryMonitorLifeCycleDealloc) {
-                [controllerPerformanceInfo.deallocPerformance addObject:performanceInfo];
+                NSMutableArray *deallocPerformanceArray = controllerPerformanceInfoDict[kMFPerformanceMonitorLifecycleDeallocKey];
+                [deallocPerformanceArray addObject:diffPerformanceInfoDict];
             }
         } else {
-            MFControllerPerformanceInfo *controllerPerformanceInfo = [MFControllerPerformanceInfo new];
-            controllerPerformanceInfo.didloadPerformance = [NSMutableArray array];
-            controllerPerformanceInfo.totloadPerformance = [NSMutableArray array];
-            controllerPerformanceInfo.deallocPerformance = [NSMutableArray array];
+            NSMutableDictionary *controllerPerformanceInfoDict = [NSMutableDictionary dictionary];
+            [controllerPerformanceInfoDict setObject:[NSMutableArray array] forKey:kMFPerformanceMonitorLifecycleDidloadKey];
+            [controllerPerformanceInfoDict setObject:[NSMutableArray array] forKey:kMFPerformanceMonitorLifecycleDeallocKey];
+            [controllerPerformanceInfoDict setObject:[NSMutableArray array] forKey:kMFPerformanceMonitorLifecycleTotalKey];
             
             if (lifeCycle == MFMemoryMonitorLifeCycleDidload) {
-                [controllerPerformanceInfo.didloadPerformance addObject:performanceInfo];
-                [controllerPerformanceInfo.totloadPerformance addObject:performanceInfo];
+                NSMutableArray *didloadPerformanceArray = controllerPerformanceInfoDict[kMFPerformanceMonitorLifecycleDidloadKey];
+                NSMutableArray *totloadPerformanceArray = controllerPerformanceInfoDict[kMFPerformanceMonitorLifecycleTotalKey];
+                [didloadPerformanceArray addObject:diffPerformanceInfoDict];
+                [totloadPerformanceArray addObject:totalPerformanceInfoDict];
             } else if (lifeCycle == MFMemoryMonitorLifeCycleDealloc) {
-                [controllerPerformanceInfo.deallocPerformance addObject:performanceInfo];
+                NSMutableArray *deallocPerformanceArray = controllerPerformanceInfoDict[kMFPerformanceMonitorLifecycleDeallocKey];
+                [deallocPerformanceArray addObject:diffPerformanceInfoDict];
             }
             
-            [_lifecyclePerformanceDict setObject:controllerPerformanceInfo forKey:controllerName];
+            [_lifecyclePerformanceDict setObject:controllerPerformanceInfoDict forKey:controllerName];
             [_lifecyclePerformanceControllerNameList addObject:controllerName];
         }
     }
 }
 
+- (void)addIgnoreController:(NSArray<Class> *)ignoredController
+{
+    [_ignoredControllers addObjectsFromArray:ignoredController];
+}
+
+- (BOOL)isIgnoredController:(NSString *)controllerName
+{
+    BOOL isIgonred = NO;
+    
+    for (Class ignoredClass in _ignoredControllers) {
+        if ([NSClassFromString(controllerName) isSubclassOfClass:ignoredClass]) {
+            isIgonred = YES;
+            break;
+        }
+    }
+    
+    return isIgonred;
+}
+
 #pragma mark - Local Cache
+
+- (void)saveToLocal
+{
+    [self saveLifecyclePerformanceDictToLocal];
+    [self saveSamplingPerformanceDictToLocal];
+    [self saveAppPerformanceListToLocal];
+}
+
+- (void)saveLifecyclePerformanceDictToLocal
+{
+    NSString *filePath = [self tempLifecyclePerformanceDictFilePath];
+    NSError *error;
+    NSData *lifecyclePerformanceDictJsonData = [NSJSONSerialization dataWithJSONObject:_lifecyclePerformanceDict options:NSJSONWritingPrettyPrinted error:&error];
+    NSString *lifecyclePerformanceDictJsonString = [[NSString alloc] initWithData:lifecyclePerformanceDictJsonData encoding:NSUTF8StringEncoding];
+    [lifecyclePerformanceDictJsonString writeToFile:filePath atomically:YES encoding:NSUTF8StringEncoding error:&error];
+}
 
 - (void)saveSamplingPerformanceDictToLocal
 {
     NSString *filePath = [self tempSamplingPerformanceDictFilePath];
-    [NSKeyedArchiver archiveRootObject:self.samplingPerformanceDict toFile:filePath];
+    NSError *error;
+    NSData *samplingPerformanceDictJsonData = [NSJSONSerialization dataWithJSONObject:self.samplingPerformanceDict options:NSJSONWritingPrettyPrinted error:&error];
+    NSString *samplingPerformanceDictJsonString = [[NSString alloc] initWithData:samplingPerformanceDictJsonData encoding:NSUTF8StringEncoding];
+    [samplingPerformanceDictJsonString writeToFile:filePath atomically:YES encoding:NSUTF8StringEncoding error:&error];
     [_samplingPerformanceDict removeAllObjects];
 }
 
 - (void)saveAppPerformanceListToLocal
 {
     NSString *filePath = [self tempAppPerformanceListFilePath];
-    [NSKeyedArchiver archiveRootObject:self.appPerformanceList toFile:filePath];
+    NSError *error;
+    NSData *appPerformanceListJsonData = [NSJSONSerialization dataWithJSONObject:self.appPerformanceList options:NSJSONWritingPrettyPrinted error:&error];
+    NSString *appPerformanceListJsonString = [[NSString alloc] initWithData:appPerformanceListJsonData encoding:NSUTF8StringEncoding];
+    [appPerformanceListJsonString writeToFile:filePath atomically:YES encoding:NSUTF8StringEncoding error:&error];
     [_appPerformanceList removeAllObjects];
 }
 
-- (NSMutableDictionary<NSString *, NSMutableArray<MFPerformanceInfo *> *> *)samplingPerformanceDict
+- (NSMutableDictionary<NSString *, NSMutableArray<NSDictionary *> *> *)samplingPerformanceDict
 {
     NSString *filePath = [self tempSamplingPerformanceDictFilePath];
-    NSMutableDictionary<NSString *, NSMutableArray<MFPerformanceInfo *> *> *savedDict = [NSKeyedUnarchiver unarchiveObjectWithFile:filePath];
+    NSError *error;
+    NSString *samplingPerformanceDictJsonString = [NSString stringWithContentsOfFile:filePath encoding:NSUTF8StringEncoding error:&error];
+    NSData *samplingPerformanceDictJsonData = [samplingPerformanceDictJsonString dataUsingEncoding:NSUTF8StringEncoding];
+    NSMutableDictionary<NSString *, NSMutableArray<NSDictionary *> *> *savedDict = samplingPerformanceDictJsonData ? [NSJSONSerialization JSONObjectWithData:samplingPerformanceDictJsonData options:NSJSONReadingMutableContainers error:&error] : nil;
     
     NSMutableDictionary *tempDict = [NSMutableDictionary dictionaryWithDictionary:_samplingPerformanceDict];
     if (savedDict) {
         for (NSString *keyString in tempDict.allKeys) {
-            NSMutableArray<MFPerformanceInfo *> *tempArray = tempDict[keyString];
+            NSMutableArray<NSDictionary *> *tempArray = tempDict[keyString];
             
             if (![savedDict objectForKey:keyString]) {
                 [savedDict setObject:tempArray forKey:keyString];
             } else {
-                NSMutableArray<MFPerformanceInfo *> *saveArray = savedDict[keyString];
+                NSMutableArray<NSDictionary *> *saveArray = savedDict[keyString];
                 [saveArray addObjectsFromArray:tempArray];
             }
         }
@@ -377,10 +430,13 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // �
     }
 }
 
-- (NSMutableArray<MFPerformanceInfo *> *)appPerformanceList
+- (NSMutableArray<NSDictionary *> *)appPerformanceList
 {
     NSString *filePath = [self tempAppPerformanceListFilePath];
-    NSMutableArray<MFPerformanceInfo *> *savedArray = [NSKeyedUnarchiver unarchiveObjectWithFile:filePath];
+    NSError *error;
+    NSString *appPerformanceListJsonString = [NSString stringWithContentsOfFile:filePath encoding:NSUTF8StringEncoding error:&error];
+    NSData *appPerformanceListJsonData = [appPerformanceListJsonString dataUsingEncoding:NSUTF8StringEncoding];
+    NSMutableArray<NSDictionary *> *savedArray = appPerformanceListJsonData ? [NSJSONSerialization JSONObjectWithData:appPerformanceListJsonData options:NSJSONReadingMutableContainers error:&error] : nil;
     
     NSMutableArray *tempArray = [NSMutableArray arrayWithArray:_appPerformanceList];
     if (savedArray) {
@@ -391,18 +447,38 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // �
     }
 }
 
+- (NSString *)tempLifecyclePerformanceDictFilePath
+{
+    NSString *directryPath = [self performanceMonitorDirectryPath];
+    NSString *filePath = [directryPath stringByAppendingPathComponent:kMFPerformanceMonitorTempLifecyclePerformanceDictFile];
+    return filePath;
+}
+
 - (NSString *)tempSamplingPerformanceDictFilePath
 {
-    NSString *docsPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
-    NSString *filePath = [docsPath stringByAppendingPathComponent:kMFPerformanceMonitorTempSamplingPerformanceDictFile];
+    NSString *directryPath = [self performanceMonitorDirectryPath];
+    NSString *filePath = [directryPath stringByAppendingPathComponent:kMFPerformanceMonitorTempSamplingPerformanceDictFile];
     return filePath;
 }
 
 - (NSString *)tempAppPerformanceListFilePath
 {
-    NSString *docsPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
-    NSString *filePath = [docsPath stringByAppendingPathComponent:kMFPerformanceMonitorTempAppPerformanceListFile];
+    NSString *directryPath = [self performanceMonitorDirectryPath];
+    NSString *filePath = [directryPath stringByAppendingPathComponent:kMFPerformanceMonitorTempAppPerformanceListFile];
     return filePath;
+}
+
+- (NSString *)performanceMonitorDirectryPath
+{
+    NSString *docsPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
+    
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSString *directryPath = [docsPath stringByAppendingPathComponent:@"PerformanceMonitor"];
+    if (![fileManager fileExistsAtPath:directryPath]) {
+        [fileManager createDirectoryAtPath:directryPath withIntermediateDirectories:YES attributes:nil error:nil];
+    }
+    
+    return directryPath;
 }
 
 @end

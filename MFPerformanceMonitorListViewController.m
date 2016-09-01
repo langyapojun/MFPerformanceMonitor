@@ -75,9 +75,9 @@ static NSString * const kMFPerformanceMonitorListTableViewCellIdentifier = @"kMF
     
     // 过滤只有一条数据的情况，只有一条数据没法画图也没法对比
     for (NSString *controllerName in tempList) {
-        NSMutableDictionary<NSString *, MFControllerPerformanceInfo *> *lifecyclePerformanceDict = [MFPerformanceMonitorManager sharedManager].performanceModel.lifecyclePerformanceDict;
-        MFControllerPerformanceInfo *controllerPerformanceInfo = lifecyclePerformanceDict[controllerName];
-        if (!(controllerPerformanceInfo.didloadPerformance.count < 2 && controllerPerformanceInfo.deallocPerformance.count < 2 && controllerPerformanceInfo.totloadPerformance.count < 2)) {
+        NSMutableDictionary<NSString *, NSMutableDictionary *> *lifecyclePerformanceDict = [MFPerformanceMonitorManager sharedManager].performanceModel.lifecyclePerformanceDict;
+        NSMutableDictionary<NSString *, NSMutableArray *> *controllerPerformanceInfo = lifecyclePerformanceDict[controllerName];
+        if (!(controllerPerformanceInfo[kMFPerformanceMonitorLifecycleDidloadKey].count < 2 && controllerPerformanceInfo[kMFPerformanceMonitorLifecycleDidloadKey].count < 2 && controllerPerformanceInfo[kMFPerformanceMonitorLifecycleDidloadKey].count < 2)) {
             [_performanceControllerNameList addObject:controllerName];
         }
     }

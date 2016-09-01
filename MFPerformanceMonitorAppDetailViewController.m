@@ -15,7 +15,7 @@
 
 @interface MFPerformanceMonitorAppDetailViewController ()
 
-@property (nonatomic, strong) NSMutableArray<MFPerformanceInfo *> *appPerformanceInfo;
+@property (nonatomic, strong) NSMutableArray<NSDictionary *> *appPerformanceInfo;
 @property (nonatomic, weak)   PNLineChart *lineChart;
 
 @end
@@ -27,6 +27,12 @@
     [super viewDidLoad];
     [self inits];
 }
+
+//- (void)viewDidLayoutSubviews
+//{
+//    [super viewDidLayoutSubviews];
+//    _lineChart.frame = self.view.bounds;
+//}
 
 - (void)inits
 {
@@ -44,7 +50,7 @@
     [self initNavis];
     self.view.backgroundColor = [UIColor whiteColor];
     
-    PNLineChart *lineChart = [[PNLineChart alloc] initWithFrame:CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.height - 64 - 60)];
+    PNLineChart *lineChart = [[PNLineChart alloc] initWithFrame:CGRectMake(0, 64, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.height - 128 - 60)];
     [self.view addSubview:lineChart];
     _lineChart = lineChart;
     
@@ -52,7 +58,7 @@
     lineChart.backgroundColor = [UIColor clearColor];
     lineChart.showCoordinateAxis = YES;
     
-    [lineChart setXLabels:[_appPerformanceInfo valueForKeyPath:@"intervalSeconds"]];
+    [lineChart setXLabels:[_appPerformanceInfo valueForKeyPath:kMFPerformanceMonitorPerformanceInfoTimeKey]];
     
     PNLineChartData *memChartData = [PNLineChartData new];
     memChartData.dataTitle = @"APP占用内存(MB)";
@@ -61,7 +67,7 @@
     
     __weak __typeof(self) weak_self = self;
     memChartData.getData = ^(NSUInteger index){
-        CGFloat memoryUsage = weak_self.appPerformanceInfo[index].memoryUsage;
+        CGFloat memoryUsage = [[weak_self.appPerformanceInfo[index] objectForKey:kMFPerformanceMonitorPerformanceInfoMemoryKey] floatValue];
         return [PNLineChartDataItem dataItemWithY:memoryUsage];
     };
     
@@ -70,7 +76,7 @@
     cpuChartData.color = PNRed;
     cpuChartData.itemCount = _appPerformanceInfo.count;
     cpuChartData.getData = ^(NSUInteger index){
-        CGFloat cpuUsage = weak_self.appPerformanceInfo[index].cpuUsage;
+        CGFloat cpuUsage = [[weak_self.appPerformanceInfo[index] objectForKey:kMFPerformanceMonitorPerformanceInfoCpuKey] floatValue];
         return [PNLineChartDataItem dataItemWithY:cpuUsage];
     };
     

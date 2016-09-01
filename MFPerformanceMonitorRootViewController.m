@@ -137,10 +137,11 @@
 
 - (void)saveToLoaclFile
 {
+    [[MFPerformanceMonitorManager sharedManager].performanceModel saveToLocal];
     
     // lifecycle
     NSMutableArray<NSString *> *lifecyclePerformanceControllerNameList = [MFPerformanceMonitorManager sharedManager].performanceModel.lifecyclePerformanceControllerNameList;
-    NSMutableDictionary<NSString *, MFControllerPerformanceInfo *> *lifecyclePerformanceDict = [MFPerformanceMonitorManager sharedManager].performanceModel.lifecyclePerformanceDict;
+    NSMutableDictionary<NSString *, NSMutableDictionary *> *lifecyclePerformanceDict = [MFPerformanceMonitorManager sharedManager].performanceModel.lifecyclePerformanceDict;
     
     BookHandle lifecycleBook = xlCreateBook();
     for (NSString *controllerName in lifecyclePerformanceControllerNameList) {
@@ -163,24 +164,33 @@
         }
         
         int tempRow = row + 2;
-        MFControllerPerformanceInfo *controllerPerformanceInfo = lifecyclePerformanceDict[controllerName];
+        NSMutableDictionary<NSString *, NSMutableArray<NSDictionary *> *> *controllerPerformanceInfo = lifecyclePerformanceDict[controllerName];
         
-        for (int i = 0; i < controllerPerformanceInfo.didloadPerformance.count; i++) {
-            xlSheetWriteStrA(sheet, tempRow + i, col, [controllerPerformanceInfo.didloadPerformance[i].intervalSeconds UTF8String], NULL);
-            xlSheetWriteStrA(sheet, tempRow + i, col + 1, [[NSString stringWithFormat:@"%.4f",controllerPerformanceInfo.didloadPerformance[i].memoryUsage] UTF8String],NULL);
-            xlSheetWriteStrA(sheet, tempRow + i, col + 2, [[NSString stringWithFormat:@"%.4f",controllerPerformanceInfo.didloadPerformance[i].cpuUsage] UTF8String],NULL);
+        for (int i = 0; i < controllerPerformanceInfo[kMFPerformanceMonitorLifecycleDidloadKey].count; i++) {
+            NSNumber *memoryNum = (NSNumber *)[[controllerPerformanceInfo objectForKey:kMFPerformanceMonitorLifecycleDidloadKey][i] objectForKey: kMFPerformanceMonitorPerformanceInfoMemoryKey];
+            NSNumber *cpuNum = (NSNumber *)[[controllerPerformanceInfo objectForKey:kMFPerformanceMonitorLifecycleDidloadKey][i] objectForKey: kMFPerformanceMonitorPerformanceInfoCpuKey];
+            
+            xlSheetWriteStrA(sheet, tempRow + i, col, [controllerPerformanceInfo[kMFPerformanceMonitorLifecycleDidloadKey][i][kMFPerformanceMonitorPerformanceInfoTimeKey] UTF8String], NULL);
+            xlSheetWriteStrA(sheet, tempRow + i, col + 1, [[NSString stringWithFormat:@"%.4f",[memoryNum floatValue]] UTF8String], NULL);
+            xlSheetWriteStrA(sheet, tempRow + i, col + 2, [[NSString stringWithFormat:@"%.4f",[cpuNum floatValue]] UTF8String], NULL);
         }
         
-        for (int i = 0; i < controllerPerformanceInfo.deallocPerformance.count; i++) {
-            xlSheetWriteStrA(sheet, tempRow + i, col + 3, [controllerPerformanceInfo.deallocPerformance[i].intervalSeconds UTF8String], NULL);
-            xlSheetWriteStrA(sheet, tempRow + i, col + 4, [[NSString stringWithFormat:@"%.4f",controllerPerformanceInfo.deallocPerformance[i].memoryUsage] UTF8String], NULL);
-            xlSheetWriteStrA(sheet, tempRow + i, col + 5, [[NSString stringWithFormat:@"%.4f",controllerPerformanceInfo.deallocPerformance[i].cpuUsage] UTF8String], NULL);
+        for (int i = 0; i < controllerPerformanceInfo[kMFPerformanceMonitorLifecycleDeallocKey].count; i++) {
+            NSNumber *memoryNum = (NSNumber *)[[controllerPerformanceInfo objectForKey:kMFPerformanceMonitorLifecycleDeallocKey][i] objectForKey: kMFPerformanceMonitorPerformanceInfoMemoryKey];
+            NSNumber *cpuNum = (NSNumber *)[[controllerPerformanceInfo objectForKey:kMFPerformanceMonitorLifecycleDeallocKey][i] objectForKey: kMFPerformanceMonitorPerformanceInfoCpuKey];
+            
+            xlSheetWriteStrA(sheet, tempRow + i, col + 3, [controllerPerformanceInfo[kMFPerformanceMonitorLifecycleDeallocKey][i][kMFPerformanceMonitorPerformanceInfoTimeKey] UTF8String], NULL);
+            xlSheetWriteStrA(sheet, tempRow + i, col + 4, [[NSString stringWithFormat:@"%.4f",[memoryNum floatValue]] UTF8String], NULL);
+            xlSheetWriteStrA(sheet, tempRow + i, col + 5, [[NSString stringWithFormat:@"%.4f",[cpuNum floatValue]] UTF8String], NULL);
         }
         
-        for (int i = 0; i < controllerPerformanceInfo.totloadPerformance.count; i++) {
-            xlSheetWriteStrA(sheet, tempRow + i, col + 6, [controllerPerformanceInfo.totloadPerformance[i].intervalSeconds UTF8String], NULL);
-            xlSheetWriteStrA(sheet, tempRow + i, col + 7, [[NSString stringWithFormat:@"%.4f",controllerPerformanceInfo.totloadPerformance[i].memoryUsage] UTF8String], NULL);
-            xlSheetWriteStrA(sheet, tempRow + i, col + 8, [[NSString stringWithFormat:@"%.4f",controllerPerformanceInfo.totloadPerformance[i].cpuUsage] UTF8String],NULL);
+        for (int i = 0; i < controllerPerformanceInfo[kMFPerformanceMonitorLifecycleTotalKey].count; i++) {
+            NSNumber *memoryNum = (NSNumber *)[[controllerPerformanceInfo objectForKey:kMFPerformanceMonitorLifecycleTotalKey][i] objectForKey: kMFPerformanceMonitorPerformanceInfoMemoryKey];
+            NSNumber *cpuNum = (NSNumber *)[[controllerPerformanceInfo objectForKey:kMFPerformanceMonitorLifecycleTotalKey][i] objectForKey: kMFPerformanceMonitorPerformanceInfoCpuKey];
+            
+            xlSheetWriteStrA(sheet, tempRow + i, col + 6, [controllerPerformanceInfo[kMFPerformanceMonitorLifecycleTotalKey][i][kMFPerformanceMonitorPerformanceInfoTimeKey] UTF8String], NULL);
+            xlSheetWriteStrA(sheet, tempRow + i, col + 7, [[NSString stringWithFormat:@"%.4f",[memoryNum floatValue]] UTF8String], NULL);
+            xlSheetWriteStrA(sheet, tempRow + i, col + 8, [[NSString stringWithFormat:@"%.4f",[cpuNum floatValue]] UTF8String],NULL);
         }
         
     }
@@ -205,7 +215,7 @@
     
     // sampling
     NSMutableArray<NSString *> *samplingPerformanceControllerNameList = [MFPerformanceMonitorManager sharedManager].performanceModel.samplingPerformanceControllerNameList;
-    NSMutableDictionary<NSString *, NSMutableArray<MFPerformanceInfo *> *> *samplingPerformanceDict = [MFPerformanceMonitorManager sharedManager].performanceModel.samplingPerformanceDict;
+    NSMutableDictionary<NSString *, NSMutableArray<NSDictionary *> *> *samplingPerformanceDict = [MFPerformanceMonitorManager sharedManager].performanceModel.samplingPerformanceDict;
     
     BookHandle samplingBook = xlCreateBook();
     for (NSString *controllerName in samplingPerformanceControllerNameList) {
@@ -221,12 +231,15 @@
         }
         
         int tempRow = row + 1;
-        NSMutableArray<MFPerformanceInfo *> *samplingPerformanceInfoArray = samplingPerformanceDict[controllerName];
+        NSMutableArray<NSDictionary *> *samplingPerformanceInfoArray = samplingPerformanceDict[controllerName];
         
         for (int i = 0; i < samplingPerformanceInfoArray.count; i++) {
-            xlSheetWriteStrA(sheet, tempRow + i, col, [samplingPerformanceInfoArray[i].intervalSeconds UTF8String], NULL);
-            xlSheetWriteStrA(sheet, tempRow + i, col + 1, [[NSString stringWithFormat:@"%.4f",samplingPerformanceInfoArray[i].memoryUsage] UTF8String],NULL);
-            xlSheetWriteStrA(sheet, tempRow + i, col + 2, [[NSString stringWithFormat:@"%.4f",samplingPerformanceInfoArray[i].cpuUsage] UTF8String],NULL);
+            NSNumber *memoryNum = (NSNumber *)[samplingPerformanceInfoArray[i] objectForKey: kMFPerformanceMonitorPerformanceInfoMemoryKey];
+            NSNumber *cpuNum = (NSNumber *)[samplingPerformanceInfoArray[i] objectForKey: kMFPerformanceMonitorPerformanceInfoCpuKey];
+            
+            xlSheetWriteStrA(sheet, tempRow + i, col, [samplingPerformanceInfoArray[i][kMFPerformanceMonitorPerformanceInfoTimeKey] UTF8String], NULL);
+            xlSheetWriteStrA(sheet, tempRow + i, col + 1, [[NSString stringWithFormat:@"%.4f",[memoryNum floatValue]] UTF8String],NULL);
+            xlSheetWriteStrA(sheet, tempRow + i, col + 2, [[NSString stringWithFormat:@"%.4f",[cpuNum floatValue]] UTF8String],NULL);
         }
         
     }
@@ -252,12 +265,15 @@
     }
     
     int tempRow = row + 1;
-    NSMutableArray<MFPerformanceInfo *> *appPerformanceList = [MFPerformanceMonitorManager sharedManager].performanceModel.appPerformanceList;
+    NSMutableArray<NSDictionary *> *appPerformanceList = [MFPerformanceMonitorManager sharedManager].performanceModel.appPerformanceList;
     
     for (int i = 0; i < appPerformanceList.count; i++) {
-        xlSheetWriteStrA(sheet, tempRow + i, col, [appPerformanceList[i].intervalSeconds UTF8String], NULL);
-        xlSheetWriteStrA(sheet, tempRow + i, col + 1, [[NSString stringWithFormat:@"%.4f",appPerformanceList[i].memoryUsage] UTF8String],NULL);
-        xlSheetWriteStrA(sheet, tempRow + i, col + 2, [[NSString stringWithFormat:@"%.4f",appPerformanceList[i].cpuUsage] UTF8String],NULL);
+        NSNumber *memoryNum = (NSNumber *)[appPerformanceList[i] objectForKey: kMFPerformanceMonitorPerformanceInfoMemoryKey];
+        NSNumber *cpuNum = (NSNumber *)[appPerformanceList[i] objectForKey: kMFPerformanceMonitorPerformanceInfoCpuKey];
+        
+        xlSheetWriteStrA(sheet, tempRow + i, col, [appPerformanceList[i][kMFPerformanceMonitorPerformanceInfoTimeKey] UTF8String], NULL);
+        xlSheetWriteStrA(sheet, tempRow + i, col + 1, [[NSString stringWithFormat:@"%.4f",[memoryNum floatValue]] UTF8String],NULL);
+        xlSheetWriteStrA(sheet, tempRow + i, col + 2, [[NSString stringWithFormat:@"%.4f",[cpuNum floatValue]] UTF8String],NULL);
     }
     
     
