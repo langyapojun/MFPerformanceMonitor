@@ -9,6 +9,7 @@
 #import "MFPerformanceModel.h"
 #import "MFPerformanceMonitorManager.h"
 #import <mach/mach.h>
+#import "SSZipArchive.h"
 
 #if _INTERNAL_MFPM_ENABLED
 
@@ -38,7 +39,7 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // æœ
 {
     if (self = [super init]) {
         [self initData];
-        [self initLoaclFile];
+        [self removeLoaclTempFile];
         [self startSamplingTimer];
     }
     return self;
@@ -75,7 +76,7 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // æœ
                                                ]];
 }
 
-- (void)initLoaclFile
+- (void)removeLoaclTempFile
 {
     NSError *error;
 
@@ -367,11 +368,20 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // æœ
 
 #pragma mark - Local Cache
 
-- (void)saveToLocal
+- (void)saveToLocal:(NSString *)fileName
 {
     [self saveLifecyclePerformanceDictToLocal];
     [self saveSamplingPerformanceDictToLocal];
     [self saveAppPerformanceListToLocal];
+    
+    NSString *zipFilePath = [[self performanceMonitorDirectryPath] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.zip",fileName]];
+    NSArray *toZipFilesPathArray = @[[self tempLifecyclePerformanceDictFilePath],[self tempSamplingPerformanceDictFilePath],[self tempAppPerformanceListFilePath]];
+    BOOL zipSuccess = [SSZipArchive createZipFileAtPath:zipFilePath withFilesAtPaths:toZipFilesPathArray];
+    NSAssert(zipSuccess, @"zip failed!");
+    if (zipSuccess) {
+        [self removeLoaclTempFile];
+    }
+    
 }
 
 - (void)saveLifecyclePerformanceDictToLocal

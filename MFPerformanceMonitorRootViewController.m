@@ -137,7 +137,11 @@
 
 - (void)saveToLoaclFile
 {
-    [[MFPerformanceMonitorManager sharedManager].performanceModel saveToLocal];
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    [formatter setDateFormat:@"yyyyMMdd_HH_mm_ss"];
+    NSString *stringFromDate = [formatter stringFromDate:[NSDate date]];
+    
+    [[MFPerformanceMonitorManager sharedManager].performanceModel saveToLocal:stringFromDate];
     
     // lifecycle
     NSMutableArray<NSString *> *lifecyclePerformanceControllerNameList = [MFPerformanceMonitorManager sharedManager].performanceModel.lifecyclePerformanceControllerNameList;
@@ -194,10 +198,6 @@
         }
         
     }
-    
-    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
-    [formatter setDateFormat:@"yyyyMMdd_HH_mm_ss"];
-    NSString *stringFromDate = [formatter stringFromDate:[NSDate date]];
     
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString *documentPath =
