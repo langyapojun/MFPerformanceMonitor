@@ -47,6 +47,11 @@
     return self;
 }
 
+- (void)initAppId:(NSString *)appId
+{
+    [self.performanceModel initWithAppId:appId];
+}
+
 - (MFPerformanceMonitorWindow *)performanceMonitorWindow
 {
     NSAssert([NSThread isMainThread], @"You must use %@ from the main thread only.", NSStringFromClass([self class]));

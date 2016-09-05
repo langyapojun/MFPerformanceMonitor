@@ -21,6 +21,7 @@
 @property (nonatomic) BOOL isEnable;
 
 + (instancetype)sharedManager;
+- (void)initAppId:(NSString *)appId;
 - (void)showPerformanceMonitor;
 
 @end

@@ -32,6 +32,8 @@ typedef NS_ENUM(NSUInteger,MFMemoryMonitorLifeCycle) {
 @property (nonatomic, strong) NSMutableDictionary<NSString *, NSMutableArray<NSDictionary *> *> *samplingPerformanceDict;
 @property (nonatomic, strong) NSMutableArray<NSDictionary *> *appPerformanceList;
 
+- (void)initWithAppId:(NSString *)appId;
+
 - (void)saveToLocal:(NSString *)fileName;
 
 - (CGFloat)appMemoryUsage;

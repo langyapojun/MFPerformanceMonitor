@@ -143,6 +143,8 @@
     
     [[MFPerformanceMonitorManager sharedManager].performanceModel saveToLocal:stringFromDate];
     
+    return;
+    
     // lifecycle
     NSMutableArray<NSString *> *lifecyclePerformanceControllerNameList = [MFPerformanceMonitorManager sharedManager].performanceModel.lifecyclePerformanceControllerNameList;
     NSMutableDictionary<NSString *, NSMutableDictionary *> *lifecyclePerformanceDict = [MFPerformanceMonitorManager sharedManager].performanceModel.lifecyclePerformanceDict;

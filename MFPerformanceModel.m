@@ -13,17 +13,26 @@
 
 #if _INTERNAL_MFPM_ENABLED
 
-NSString * const kMFPerformanceMonitorPerformanceInfoMemoryKey = @"kMFPerformanceMonitorPerformanceInfoMemoryKey";
-NSString * const kMFPerformanceMonitorPerformanceInfoCpuKey = @"kMFPerformanceMonitorPerformanceInfoCpuKey";
-NSString * const kMFPerformanceMonitorPerformanceInfoTimeKey = @"kMFPerformanceMonitorPerformanceInfoTimeKey";
-NSString * const kMFPerformanceMonitorLifecycleDidloadKey = @"kMFPerformanceMonitorLifecycleDidloadKey";
-NSString * const kMFPerformanceMonitorLifecycleDeallocKey = @"kMFPerformanceMonitorLifecycleDeallocKey";
-NSString * const kMFPerformanceMonitorLifecycleTotalKey = @"kMFPerformanceMonitorLifecycleTotalKey";
+NSString * const kMFPerformanceMonitorPerformanceInfoMemoryKey = @"mem";
+NSString * const kMFPerformanceMonitorPerformanceInfoCpuKey = @"cpu";
+NSString * const kMFPerformanceMonitorPerformanceInfoTimeKey = @"time";
+NSString * const kMFPerformanceMonitorLifecycleDidloadKey = @"loaded";
+NSString * const kMFPerformanceMonitorLifecycleDeallocKey = @"dealloc";
+NSString * const kMFPerformanceMonitorLifecycleTotalKey = @"total";
 
-static NSString * kMFPerformanceMonitorTempLifecyclePerformanceDictFile = @"MFPerformanceMonitorTempLifecyclePerformanceDictFile";
-static NSString * kMFPerformanceMonitorTempSamplingPerformanceDictFile = @"MFPerformanceMonitorTempSamplingPerformanceDictFile";
-static NSString * kMFPerformanceMonitorTempAppPerformanceListFile = @"MFPerformanceMonitorTempAppPerformanceListFile";
+static NSString * kMFPerformanceMonitorTempAppInfoDictFile = @"info.json";
+static NSString * kMFPerformanceMonitorTempLifecyclePerformanceDictFile = @"lifecycle.json";
+static NSString * kMFPerformanceMonitorTempSamplingPerformanceDictFile = @"sampling.json";
+static NSString * kMFPerformanceMonitorTempAppPerformanceListFile = @"app.json";
 static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // 最大的数组个数，超过后写入本地文件，目的是减少内存
+
+static NSString * kMFPerformanceMonitorAppInfoAppId = @"appid";
+static NSString * kMFPerformanceMonitorAppInfoVersion = @"version";
+static NSString * kMFPerformanceMonitorAppInfoBeginTime = @"beginTime";
+static NSString * kMFPerformanceMonitorAppInfoDuration = @"duration";
+//static NSString * kMFPerformanceMonitorAppInfoFileName = @"fileName";
+
+
 
 @interface MFPerformanceModel ()
 
@@ -31,6 +40,7 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // �
 @property (nonatomic, assign) CFTimeInterval startMediaTime;
 @property (nonatomic, strong) NSMutableDictionary<NSString *,NSNumber *> *memoryWithAllocLifeCycleDict;
 @property (nonatomic, strong) NSMutableArray<Class> *ignoredControllers;
+@property (nonatomic, strong) NSMutableDictionary<NSString *,NSString *> *appInfo;
 @end
 
 @implementation MFPerformanceModel
@@ -60,7 +70,21 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // �
     _appPerformanceList = [NSMutableArray array];
     _startMediaTime = CACurrentMediaTime();
     
+    [self initAppInfo];
     [self initIgnoredControllers];
+}
+
+- (void)initAppInfo
+{
+    _appInfo = [NSMutableDictionary dictionary];
+    
+    NSDictionary *infoDic = [NSBundle mainBundle].infoDictionary;
+    NSString *appVersion =  infoDic[@"CFBundleShortVersionString"];
+    [_appInfo setObject:appVersion forKey:kMFPerformanceMonitorAppInfoVersion];
+    
+    NSString *beginTime = [@([[NSDate date] timeIntervalSince1970]) stringValue];
+    [_appInfo setObject:beginTime forKey:kMFPerformanceMonitorAppInfoBeginTime];
+    
 }
 
 - (void)initIgnoredControllers
@@ -76,10 +100,21 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // �
                                                ]];
 }
 
+- (void)initWithAppId:(NSString *)appId
+{
+    NSAssert(appId != nil, @"invalid appid");
+    
+    [_appInfo setObject:appId forKey:kMFPerformanceMonitorAppInfoAppId];
+}
+
 - (void)removeLoaclTempFile
 {
     NSError *error;
 
+    if ([[NSFileManager defaultManager] fileExistsAtPath:[self tempAppInfoDictFilePath]]) {
+        [[NSFileManager defaultManager] removeItemAtPath:[self tempAppInfoDictFilePath] error:&error];
+    }
+    
     if ([[NSFileManager defaultManager] fileExistsAtPath:[self tempSamplingPerformanceDictFilePath]]) {
         [[NSFileManager defaultManager] removeItemAtPath:[self tempSamplingPerformanceDictFilePath] error:&error];
     }
@@ -370,18 +405,28 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // �
 
 - (void)saveToLocal:(NSString *)fileName
 {
+    [self saveAppInfoDictToLocal];
     [self saveLifecyclePerformanceDictToLocal];
     [self saveSamplingPerformanceDictToLocal];
     [self saveAppPerformanceListToLocal];
     
     NSString *zipFilePath = [[self performanceMonitorDirectryPath] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.zip",fileName]];
-    NSArray *toZipFilesPathArray = @[[self tempLifecyclePerformanceDictFilePath],[self tempSamplingPerformanceDictFilePath],[self tempAppPerformanceListFilePath]];
+    NSArray *toZipFilesPathArray = @[[self tempAppInfoDictFilePath],[self tempLifecyclePerformanceDictFilePath],[self tempSamplingPerformanceDictFilePath],[self tempAppPerformanceListFilePath]];
     BOOL zipSuccess = [SSZipArchive createZipFileAtPath:zipFilePath withFilesAtPaths:toZipFilesPathArray];
     NSAssert(zipSuccess, @"zip failed!");
-    if (zipSuccess) {
-        [self removeLoaclTempFile];
-    }
+}
+
+- (void)saveAppInfoDictToLocal
+{
+    NSTimeInterval intervalSecs = [[NSDate date] timeIntervalSince1970];
+    NSTimeInterval duration = intervalSecs - [_appInfo[kMFPerformanceMonitorAppInfoBeginTime] doubleValue];
+    [_appInfo setObject:[@(duration) stringValue] forKey:kMFPerformanceMonitorAppInfoDuration];
     
+    NSString *filePath = [self tempAppInfoDictFilePath];
+    NSError *error;
+    NSData *appInfoDictJsonData = [NSJSONSerialization dataWithJSONObject:_appInfo options:NSJSONWritingPrettyPrinted error:&error];
+    NSString *appInfoDictJsonString = [[NSString alloc] initWithData:appInfoDictJsonData encoding:NSUTF8StringEncoding];
+    [appInfoDictJsonString writeToFile:filePath atomically:YES encoding:NSUTF8StringEncoding error:&error];
 }
 
 - (void)saveLifecyclePerformanceDictToLocal
@@ -455,6 +500,13 @@ static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // �
     } else {
         return tempArray;
     }
+}
+
+- (NSString *)tempAppInfoDictFilePath
+{
+    NSString *directryPath = [self performanceMonitorDirectryPath];
+    NSString *filePath = [directryPath stringByAppendingPathComponent:kMFPerformanceMonitorTempAppInfoDictFile];
+    return filePath;
 }
 
 - (NSString *)tempLifecyclePerformanceDictFilePath
