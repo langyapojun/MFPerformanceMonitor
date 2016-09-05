@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = "MFPerformanceMonitor"
-  s.version          = "0.2.2"
+  s.version          = "0.2.3"
   s.homepage         = "https://github.com/vviicc/MFPerformanceMonitor"
   s.summary          = "A tool to monitor ios app performance such as memory and cpu."
 
@@ -19,7 +19,7 @@ Pod::Spec.new do |s|
   s.public_header_files = '*.{h}'
   s.requires_arc = true
   s.dependency 'PNChart'
-  s.dependency 'SSZipArchive'
+  s.dependency 'ZipArchiveV'
   s.dependency 'MLeaksFinder'
 
   the_ldflags    = '$(inherited) -lz -lstdc++ -framework "LibXL"'
