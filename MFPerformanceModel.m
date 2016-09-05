@@ -24,6 +24,9 @@ static NSString * kMFPerformanceMonitorTempAppInfoDictFile = @"info.json";
 static NSString * kMFPerformanceMonitorTempLifecyclePerformanceDictFile = @"lifecycle.json";
 static NSString * kMFPerformanceMonitorTempSamplingPerformanceDictFile = @"sampling.json";
 static NSString * kMFPerformanceMonitorTempAppPerformanceListFile = @"app.json";
+static NSString * kMFPerformanceMonitorTempLifecycleListFile = @"lifecyclelist.json";
+static NSString * kMFPerformanceMonitorTempSamplingListFile = @"samplinglist.json";
+
 static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // 最大的数组个数，超过后写入本地文件，目的是减少内存
 
 static NSString * kMFPerformanceMonitorAppInfoAppId = @"appid";
@@ -125,6 +128,14 @@ static NSString * kMFPerformanceMonitorAppInfoDuration = @"duration";
     
     if ([[NSFileManager defaultManager] fileExistsAtPath:[self tempLifecyclePerformanceDictFilePath]]) {
         [[NSFileManager defaultManager] removeItemAtPath:[self tempLifecyclePerformanceDictFilePath] error:&error];
+    }
+    
+    if ([[NSFileManager defaultManager] fileExistsAtPath:[self tempLifecycleListFilePath]]) {
+        [[NSFileManager defaultManager] removeItemAtPath:[self tempLifecycleListFilePath] error:&error];
+    }
+    
+    if ([[NSFileManager defaultManager] fileExistsAtPath:[self tempSamplingListFilePath]]) {
+        [[NSFileManager defaultManager] removeItemAtPath:[self tempSamplingListFilePath] error:&error];
     }
     
 }
@@ -409,9 +420,11 @@ static NSString * kMFPerformanceMonitorAppInfoDuration = @"duration";
     [self saveLifecyclePerformanceDictToLocal];
     [self saveSamplingPerformanceDictToLocal];
     [self saveAppPerformanceListToLocal];
+    [self saveLifecycleListToLocal];
+    [self saveSamplingListToLocal];
     
     NSString *zipFilePath = [[self performanceMonitorDirectryPath] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.zip",fileName]];
-    NSArray *toZipFilesPathArray = @[[self tempAppInfoDictFilePath],[self tempLifecyclePerformanceDictFilePath],[self tempSamplingPerformanceDictFilePath],[self tempAppPerformanceListFilePath]];
+    NSArray *toZipFilesPathArray = @[[self tempAppInfoDictFilePath],[self tempLifecyclePerformanceDictFilePath],[self tempSamplingPerformanceDictFilePath],[self tempAppPerformanceListFilePath], [self tempLifecycleListFilePath], [self tempSamplingListFilePath]];
     BOOL zipSuccess = [SSZipArchive createZipFileAtPath:zipFilePath withFilesAtPaths:toZipFilesPathArray];
     NSAssert(zipSuccess, @"zip failed!");
 }
@@ -456,6 +469,24 @@ static NSString * kMFPerformanceMonitorAppInfoDuration = @"duration";
     NSString *appPerformanceListJsonString = [[NSString alloc] initWithData:appPerformanceListJsonData encoding:NSUTF8StringEncoding];
     [appPerformanceListJsonString writeToFile:filePath atomically:YES encoding:NSUTF8StringEncoding error:&error];
     [_appPerformanceList removeAllObjects];
+}
+
+- (void)saveLifecycleListToLocal
+{
+    NSString *filePath = [self tempLifecycleListFilePath];
+    NSError *error;
+    NSData *lifecycleListJsonData = [NSJSONSerialization dataWithJSONObject:_lifecyclePerformanceControllerNameList options:NSJSONWritingPrettyPrinted error:&error];
+    NSString *lifecycleListJsonString = [[NSString alloc] initWithData:lifecycleListJsonData encoding:NSUTF8StringEncoding];
+    [lifecycleListJsonString writeToFile:filePath atomically:YES encoding:NSUTF8StringEncoding error:&error];
+}
+
+- (void)saveSamplingListToLocal
+{
+    NSString *filePath = [self tempSamplingListFilePath];
+    NSError *error;
+    NSData *samplingListJsonData = [NSJSONSerialization dataWithJSONObject:_samplingPerformanceControllerNameList options:NSJSONWritingPrettyPrinted error:&error];
+    NSString *samplingListJsonString = [[NSString alloc] initWithData:samplingListJsonData encoding:NSUTF8StringEncoding];
+    [samplingListJsonString writeToFile:filePath atomically:YES encoding:NSUTF8StringEncoding error:&error];
 }
 
 - (NSMutableDictionary<NSString *, NSMutableArray<NSDictionary *> *> *)samplingPerformanceDict
@@ -527,6 +558,20 @@ static NSString * kMFPerformanceMonitorAppInfoDuration = @"duration";
 {
     NSString *directryPath = [self performanceMonitorDirectryPath];
     NSString *filePath = [directryPath stringByAppendingPathComponent:kMFPerformanceMonitorTempAppPerformanceListFile];
+    return filePath;
+}
+
+- (NSString *)tempLifecycleListFilePath
+{
+    NSString *directryPath = [self performanceMonitorDirectryPath];
+    NSString *filePath = [directryPath stringByAppendingPathComponent:kMFPerformanceMonitorTempLifecycleListFile];
+    return filePath;
+}
+
+- (NSString *)tempSamplingListFilePath
+{
+    NSString *directryPath = [self performanceMonitorDirectryPath];
+    NSString *filePath = [directryPath stringByAppendingPathComponent:kMFPerformanceMonitorTempSamplingListFile];
     return filePath;
 }
 
