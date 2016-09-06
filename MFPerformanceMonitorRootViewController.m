@@ -143,7 +143,7 @@
     
     [[MFPerformanceMonitorManager sharedManager].performanceModel saveToLocal:stringFromDate];
     
-    return;
+//    return;
     
     // lifecycle
     NSMutableArray<NSString *> *lifecyclePerformanceControllerNameList = [MFPerformanceMonitorManager sharedManager].performanceModel.lifecyclePerformanceControllerNameList;

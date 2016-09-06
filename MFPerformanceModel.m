@@ -20,12 +20,12 @@ NSString * const kMFPerformanceMonitorLifecycleDidloadKey = @"loaded";
 NSString * const kMFPerformanceMonitorLifecycleDeallocKey = @"dealloc";
 NSString * const kMFPerformanceMonitorLifecycleTotalKey = @"total";
 
-static NSString * kMFPerformanceMonitorTempAppInfoDictFile = @"info.json";
-static NSString * kMFPerformanceMonitorTempLifecyclePerformanceDictFile = @"lifecycle.json";
-static NSString * kMFPerformanceMonitorTempSamplingPerformanceDictFile = @"sampling.json";
-static NSString * kMFPerformanceMonitorTempAppPerformanceListFile = @"app.json";
+static NSString * kMFPerformanceMonitorTempAppInfoDictFile = @"appinfo.json";
+static NSString * kMFPerformanceMonitorTempLifecyclePerformanceDictFile = @"controllerlifecycle.json";
+static NSString * kMFPerformanceMonitorTempSamplingPerformanceDictFile = @"controllersample.json";
+static NSString * kMFPerformanceMonitorTempAppPerformanceListFile = @"appsample.json";
 static NSString * kMFPerformanceMonitorTempLifecycleListFile = @"lifecyclelist.json";
-static NSString * kMFPerformanceMonitorTempSamplingListFile = @"samplinglist.json";
+static NSString * kMFPerformanceMonitorTempSamplingListFile = @"samplelist.json";
 
 static NSInteger const kMFPerformanceMonitorMaxArrayCount = 10000;         // 最大的数组个数，超过后写入本地文件，目的是减少内存
 
@@ -44,6 +44,8 @@ static NSString * kMFPerformanceMonitorAppInfoDuration = @"duration";
 @property (nonatomic, strong) NSMutableDictionary<NSString *,NSNumber *> *memoryWithAllocLifeCycleDict;
 @property (nonatomic, strong) NSMutableArray<Class> *ignoredControllers;
 @property (nonatomic, strong) NSMutableDictionary<NSString *,NSString *> *appInfo;
+@property (nonatomic, strong) NSURLSession * session;
+
 @end
 
 @implementation MFPerformanceModel
@@ -73,6 +75,9 @@ static NSString * kMFPerformanceMonitorAppInfoDuration = @"duration";
     _appPerformanceList = [NSMutableArray array];
     _startMediaTime = CACurrentMediaTime();
     
+    NSURLSessionConfiguration * configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
+    self.session = [NSURLSession sessionWithConfiguration:configuration delegate:self delegateQueue:[NSOperationQueue mainQueue]];
+    
     [self initAppInfo];
     [self initIgnoredControllers];
 }
@@ -85,7 +90,7 @@ static NSString * kMFPerformanceMonitorAppInfoDuration = @"duration";
     NSString *appVersion =  infoDic[@"CFBundleShortVersionString"];
     [_appInfo setObject:appVersion forKey:kMFPerformanceMonitorAppInfoVersion];
     
-    NSString *beginTime = [@([[NSDate date] timeIntervalSince1970]) stringValue];
+    NSString *beginTime = [NSString stringWithFormat:@"%.f",[[NSDate date] timeIntervalSince1970]];
     [_appInfo setObject:beginTime forKey:kMFPerformanceMonitorAppInfoBeginTime];
     
 }
@@ -427,13 +432,15 @@ static NSString * kMFPerformanceMonitorAppInfoDuration = @"duration";
     NSArray *toZipFilesPathArray = @[[self tempAppInfoDictFilePath],[self tempLifecyclePerformanceDictFilePath],[self tempSamplingPerformanceDictFilePath],[self tempAppPerformanceListFilePath], [self tempLifecycleListFilePath], [self tempSamplingListFilePath]];
     BOOL zipSuccess = [SSZipArchive createZipFileAtPath:zipFilePath withFilesAtPaths:toZipFilesPathArray];
     NSAssert(zipSuccess, @"zip failed!");
+//    [self uploadFile:zipFilePath];
 }
 
 - (void)saveAppInfoDictToLocal
 {
     NSTimeInterval intervalSecs = [[NSDate date] timeIntervalSince1970];
-    NSTimeInterval duration = intervalSecs - [_appInfo[kMFPerformanceMonitorAppInfoBeginTime] doubleValue];
-    [_appInfo setObject:[@(duration) stringValue] forKey:kMFPerformanceMonitorAppInfoDuration];
+    NSTimeInterval durationInterval = intervalSecs - [_appInfo[kMFPerformanceMonitorAppInfoBeginTime] doubleValue];
+    NSString *duration = [NSString stringWithFormat:@"%.f",durationInterval];
+    [_appInfo setObject:duration forKey:kMFPerformanceMonitorAppInfoDuration];
     
     NSString *filePath = [self tempAppInfoDictFilePath];
     NSError *error;
@@ -586,6 +593,29 @@ static NSString * kMFPerformanceMonitorAppInfoDuration = @"duration";
     }
     
     return directryPath;
+}
+
+#pragma mark - Upload File
+
+- (void)uploadFile:(NSString *)filePath
+{
+        NSMutableURLRequest * request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"test"]];
+        [request addValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+        [request addValue:@"application/json" forHTTPHeaderField:@"Accept"];
+        [request setHTTPMethod:@"POST"];
+        [request setCachePolicy:NSURLRequestReloadIgnoringCacheData];
+        [request setTimeoutInterval:20];
+        
+        NSURLSessionUploadTask * uploadtask = [self.session uploadTaskWithRequest:request fromFile:[NSURL URLWithString:filePath] completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+            if (!error) {
+                NSString *string = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+                NSLog(@"success!");
+            }else{
+                NSLog(@"fail");
+            }
+            
+        }];
+        [uploadtask resume];
 }
 
 @end
